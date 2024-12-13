@@ -79,4 +79,6 @@ module.exports = app;
 
 // Démarrage du serveur pour un environnement de développement local
 if (require.main === module) {
- 
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
+}
