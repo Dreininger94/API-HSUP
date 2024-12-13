@@ -64,6 +64,12 @@ app.get('/api', (req, res) => {
   res.json({ message: "L'API fonctionne correctement" });
 });
 
+app.post('/test', (req, res) => {
+  console.log('Test route hit');
+  res.json({ message: 'Test route working', body: req.body });
+});
+
+
 // Route POST pour récupérer une date basée sur un numéro de série
 
 app.post('/api/getDate', async (req, res) => {
