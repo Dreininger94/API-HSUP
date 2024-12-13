@@ -35,6 +35,10 @@ app.use((req, res, next) => {
 
 // L'URL de votre Google Sheet publié en CSV
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTayTaljYkULe2IjTfrRjvKP7tR8BClz7aEiCyMFNRC8x594c_YGCuHoLgeaVXYmkqhQNQA1Baewypk/pub?output=csv';
+// Ne pas utiliser le cache de Google Sheets
+const urlWithCacheBuster = `${SHEET_URL}&nocache=${Date.now()}`;
+const response = await axios.get(urlWithCacheBuster);
+
 
 // Fonction pour récupérer les données de la Google Sheet
 async function fetchData() {
