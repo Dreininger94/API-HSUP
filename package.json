@@ -4,7 +4,7 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "build": "npm install"
+    "build": "echo 'No build step required'"
   },
   "dependencies": {
     "express": "^4.17.1",
