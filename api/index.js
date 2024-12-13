@@ -29,6 +29,11 @@ async function fetchData() {
   }
 }
 
+// Route pour gérer les requêtes favicon.ico et éviter les erreurs dans les logs
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // Réponse vide avec statut 204 (No Content)
+});
+
 // Route racine pour vérifier que l'API fonctionne
 app.get('/', (req, res) => {
   console.log('Route / hit'); // Log : Route /
@@ -74,6 +79,4 @@ module.exports = app;
 
 // Démarrage du serveur pour un environnement de développement local
 if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
-}
+ 
