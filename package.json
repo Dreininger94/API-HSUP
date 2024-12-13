@@ -4,11 +4,14 @@
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
-    "build": "echo 'No build step required'"
+    "dev": "vercel dev"
   },
   "dependencies": {
     "express": "^4.17.1",
     "axios": "^0.21.1"
+  },
+  "devDependencies": {
+    "vercel": "^23.1.2"
   }
 }
 
