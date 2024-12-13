@@ -6,6 +6,17 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Permettre toutes les origines
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // Permettre les méthodes
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); // Permettre les en-têtes
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end(); // Répondre aux requêtes prévol (OPTIONS)
+  }
+  next();
+});
+
+
 // L'URL de votre Google Sheet publié en CSV
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTayTaljYkULe2IjTfrRjvKP7tR8BClz7aEiCyMFNRC8x594c_YGCuHoLgeaVXYmkqhQNQA1Baewypk/pub?output=csv';
 
