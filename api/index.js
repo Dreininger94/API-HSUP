@@ -47,8 +47,10 @@ app.get('/api', (req, res) => {
 });
 
 // Route POST pour récupérer une date basée sur un numéro de série
+
 app.post('/api/getDate', async (req, res) => {
   console.log('Request received at /api/getDate with body:', req.body); // Log : Corps de la requête
+  console.log('Request received with body:', req.body); // Log du corps de la requête
   try {
     const { serial } = req.body;
 
