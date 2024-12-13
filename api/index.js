@@ -7,11 +7,6 @@ app.use(express.json());
 app.use(cors());
 
 app.use((req, res, next) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    next();
-});
-
-app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); // Permettre toutes les origines
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'); // Permettre les méthodes
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type'); // Permettre les en-têtes
@@ -25,6 +20,16 @@ app.use((req, res, next) => {
   console.log('Headers:', req.headers);
   console.log('Body:', req.body);
   res.setHeader('Content-Security-Policy', "default-src 'self' https:");
+  next();
+});
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end(); // Réponse immédiate aux requêtes OPTIONS
+  }
   next();
 });
 
