@@ -8,7 +8,7 @@ app.use(cors());
 
 // L'URL de votre Google Sheet publié en CSV
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTayTaljYkULe2IjTfrRjvKP7tR8BClz7aEiCyMFNRC8x594c_YGCuHoLgeaVXYmkqhQNQA1Baewypk/pub?output=csv';
-
+https://docs.google.com/spreadsheets/d/1iKbjNyN6jgTxwkhjz3avQ_CAuXGno8lcNyq9S_QAWq0/edit?usp=sharing
 // Fonction pour récupérer les données de la Google Sheet
 async function fetchData() {
   try {
@@ -60,6 +60,26 @@ app.post('/api/getDate', async (req, res) => {
 
 // Exportation de l'application pour Vercel
 module.exports = app;
+
+async function fetchData() {
+  try {
+    console.log('Fetching data from:', SHEET_URL); // Log : URL de la Google Sheet
+    const response = await axios.get(SHEET_URL);
+    console.log('Data fetched successfully:', response.data); // Log : Données brutes récupérées
+    
+    const rows = response.data.split('\n').map(row => row.split(','));
+    console.log('Parsed rows:', rows); // Log : Données après parsing
+
+    return rows.reduce((acc, [serial, date]) => {
+      acc[serial.trim()] = date.trim();
+      return acc;
+    }, {});
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données:', error.response?.status, error.response?.data);
+    throw error;
+  }
+}
+
 
 // Démarrage du serveur pour un environnement de développement local
 if (require.main === module) {
