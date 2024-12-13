@@ -22,6 +22,11 @@ async function fetchData() {
   }
 }
 
+// Ajout d'une route GET pour faciliter le test
+app.get('/api', (req, res) => {
+  res.json({ message: "L'API fonctionne correctement" });
+});
+
 app.post('/api/getDate', async (req, res) => {
   try {
     const { serial } = req.body;
@@ -43,9 +48,12 @@ app.post('/api/getDate', async (req, res) => {
   }
 });
 
+// Pour le développement local
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
 }
 
+// Assurez-vous que l'application est exportée correctement pour Vercel
 module.exports = app;
+
