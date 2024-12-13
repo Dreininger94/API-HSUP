@@ -1,17 +1,17 @@
 {
   "name": "serial-date-api",
   "version": "1.0.0",
-  "description": "API to fetch dates for serial numbers",
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
     "dev": "vercel dev"
   },
   "dependencies": {
-    "axios": "^0.21.1",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "axios": "^0.21.1"
   },
   "devDependencies": {
     "vercel": "^23.1.2"
   }
 }
+
