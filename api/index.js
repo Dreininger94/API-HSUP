@@ -15,6 +15,10 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'self' https:");
+  next();
+});
 
 
 // L'URL de votre Google Sheet publié en CSV
