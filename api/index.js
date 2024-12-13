@@ -16,6 +16,9 @@ app.use((req, res, next) => {
   next();
 });
 app.use((req, res, next) => {
+  console.log(`Request received: ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
   res.setHeader('Content-Security-Policy', "default-src 'self' https:");
   next();
 });
