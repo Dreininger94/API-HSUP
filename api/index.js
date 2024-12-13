@@ -54,6 +54,6 @@ if (require.main === module) {
   app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
 }
 
-// Assurez-vous que l'application est exportée correctement pour Vercel
+// Exportation pour Vercel
 module.exports = app;
 
