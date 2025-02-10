@@ -75,7 +75,7 @@ async function getClientInfo(req) {
 }
 
 // Fonction pour écrire dans la Google Sheet
-async function logToGoogleSheet(serial, date, clientInfo, success) {
+async function logToGoogleSheet(serial, date, clientInfo, success, uuid) {
     try {
         console.log('Authenticating with Google...');
         const authClient = await auth.getClient();
@@ -85,21 +85,42 @@ async function logToGoogleSheet(serial, date, clientInfo, success) {
         const sheets = google.sheets({ version: 'v4', auth: authClient });
         console.log('Google Sheets API initialized.');
 
-        const timestamp = new Date().toISOString();
+        // Extraire les informations de l'UUID
+        const [user, machine, copy] = extractUserMachineFromUUID(uuid);
+
+        // Obtenir le timestamp actuel en UTC
+        const timestampUTC = new Date();
+
+        // Ajuster le timestamp vers le fuseau horaire de Paris
+        const parisTime = adjustToParisTime(timestampUTC);
+
+        // Découper le timestamp en composantes (année, mois, jour, heure)
+        const year = parisTime.getFullYear();
+        const month = parisTime.getMonth() + 1; // Les mois commencent à 0
+        const day = parisTime.getDate();
+        const hour = parisTime.getHours() + ':' + pad(parisTime.getMinutes());
+
+        // Préparer les données à écrire
         const logData = [
-            timestamp,
-            clientInfo.ip,
-            clientInfo.country,
-            clientInfo.city,
-            serial,
-            success ? date : 'Échec',
-            success ? 'Succès' : 'Échec',
+            year,                       // Année
+            month,                      // Mois
+            day,                        // Jour
+            hour,                       // Heure (Paris)
+            user,                       // Utilisateur
+            machine,                    // Machine
+            copy,                       // Copie
+            clientInfo.ip,              // IP
+            clientInfo.country,         // Pays
+            clientInfo.city,            // Ville
+            serial,                     // Numéro de série
+            success ? date : 'Échec',   // Résultat (date ou "Échec")
+            success ? 'Succès' : 'Échec'// Statut (Succès ou Échec)
         ];
 
         console.log('Appending data to Google Sheet:', logData);
         await sheets.spreadsheets.values.append({
             spreadsheetId: SHEET_ID,
-            range: `${SHEET_NAME}!A:H`, // Ajustez selon vos colonnes
+            range: `${SHEET_NAME}!A:M`, // Ajustez selon vos colonnes
             valueInputOption: 'RAW',
             requestBody: {
                 values: [logData],
@@ -113,16 +134,32 @@ async function logToGoogleSheet(serial, date, clientInfo, success) {
     }
 }
 
-// Route POST pour récupérer une date basée sur un numéro de série
+function extractUserMachineFromUUID(uuid) {
+    const parts = uuid.split('-');
+    const user = parts[1];       // Par exemple, "David"
+    const machine = parts[3];    // Par exemple, "PC001"
+    const copy = parts[5];       // Par exemple, "3"
+
+    return [user, machine, copy];
+}
+function adjustToParisTime(date) {
+    const parisTimeZone = 'Europe/Paris';
+    return new Date(date.toLocaleString('en-US', { timeZone: parisTimeZone }));
+}
+function pad(value) {
+    return value.toString().padStart(2, '0'); // Ajoute un zéro devant si nécessaire
+}
+
+// Route POST pour récupérer une date + UUID basée sur un numéro de série
 app.post('/api/getDate', async (req, res) => {
     console.log('Request received at /api/getDate with body:', req.body);
 
     try {
-        const { serial } = req.body;
+        const { serial, uuid } = req.body;
 
-        if (!serial) {
-            console.log('Numéro de série manquant');
-            return res.status(400).json({ status: 'Error', message: 'Numéro de série manquant' });
+        if (!serial || !uuid) {
+            console.log('Numéro de série ou UUID manquant');
+            return res.status(400).json({ status: 'Error', message: 'Numéro de série ou UUID manquant' });
         }
 
         // Récupérer les informations géographiques
@@ -134,7 +171,7 @@ app.post('/api/getDate', async (req, res) => {
         const date = data[serial];
 
         // Écrire les logs dans Google Sheets
-        await logToGoogleSheet(serial, date, clientInfo, !!date);
+        await logToGoogleSheet(serial, date, clientInfo, !!date, uuid);
 
         if (date) {
             console.log('Date trouvée:', date);
