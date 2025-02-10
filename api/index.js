@@ -247,7 +247,22 @@ app.get('/api', (req, res) => {
     console.log('Route /api hit'); // Log : Route /api
     res.json({ message: "L'API fonctionne correctement" });
 });
+// Route pour /api/getdate
+app.post('/api/getdate', async (req, res) => {
+    try {
+        const { serial, uuid } = req.body;
 
+        if (!serial || !uuid) {
+            return res.status(400).json({ status: 'Error', message: 'Numéro de série ou UUID manquant' });
+        }
+
+        // Simulez une réponse pour tester la route
+        return res.json({ status: 'Success', date: '01/03/2025' });
+    } catch (error) {
+        console.error('Erreur sur /api/getdate:', error.message);
+        return res.status(500).json({ status: 'Error', message: 'Erreur serveur' });
+    }
+});
 // Exportation de l'application pour Vercel
 module.exports = app;
 
