@@ -134,57 +134,102 @@ async function logToGoogleSheet(serial, date, clientInfo, success, uuid) {
     }
 }
 
+// Fonction pour extraire les informations utilisateur, machine et compteur de copies depuis l'UUID
 function extractUserMachineFromUUID(uuid) {
-    const parts = uuid.split('-');
-    const user = parts[1];       // Par exemple, "David"
-    const machine = parts[3];    // Par exemple, "PC001"
-    const copy = parts[5];       // Par exemple, "3"
+    try {
+        // Vérifier que l'UUID commence par "User-" et contient "Machine-" et "Copy-"
+        if (!uuid.startsWith("User-") || !uuid.includes("Machine-") || !uuid.includes("Copy-")) {
+            console.error("Erreur : UUID mal formé", uuid);
+            return ["Unknown", "Unknown", 0]; // Valeurs par défaut en cas d'erreur
+        }
 
-    return [user, machine, copy];
+        // Extraire l'utilisateur (après "User-" jusqu'à "Machine-")
+        const userStart = "User-".length;
+        const userEnd = uuid.indexOf("-Machine-");
+        const user = uuid.substring(userStart, userEnd);
+
+        // Extraire la machine (après "Machine-" jusqu'à "Copy-")
+        const machineStart = uuid.indexOf("-Machine-") + "-Machine-".length;
+        const machineEnd = uuid.indexOf("-Copy-");
+        const machine = uuid.substring(machineStart, machineEnd);
+
+        // Extraire le compteur de copies (après "Copy-")
+        const copyStart = uuid.indexOf("-Copy-") + "-Copy-".length;
+        const copy = parseInt(uuid.substring(copyStart), 10);
+
+        // Retourner les valeurs extraites
+        return [user, machine, isNaN(copy) ? 0 : copy];
+    } catch (error) {
+        console.error("Erreur dans extractUserMachineFromUUID :", error.message);
+        return ["Unknown", "Unknown", 0]; // Valeurs par défaut en cas d'erreur
+    }
 }
+
+// Fonction pour écrire les logs dans Google Sheets
+async function logToGoogleSheet(serial, date, clientInfo, success, uuid) {
+    try {
+        console.log('Authenticating with Google...');
+        const authClient = await auth.getClient();
+        console.log('Authenticated successfully.');
+
+        console.log('Initializing Google Sheets API...');
+        const sheets = google.sheets({ version: 'v4', auth: authClient });
+        console.log('Google Sheets API initialized.');
+
+        // Extraire les informations de l'UUID
+        const [user, machine, copy] = extractUserMachineFromUUID(uuid);
+
+        // Obtenir le timestamp actuel en UTC
+        const timestampUTC = new Date();
+
+        // Ajuster le timestamp vers le fuseau horaire de Paris
+        const parisTime = adjustToParisTime(timestampUTC);
+
+        // Découper le timestamp en composantes (année, mois, jour, heure)
+        const year = parisTime.getFullYear();
+        const month = parisTime.getMonth() + 1; // Les mois commencent à 0
+        const day = parisTime.getDate();
+        const hour = `${parisTime.getHours()}:${String(parisTime.getMinutes()).padStart(2, '0')}`;
+
+        // Préparer les données à écrire
+        const logData = [
+            year,                       // Année
+            month,                      // Mois
+            day,                        // Jour
+            hour,                       // Heure (Paris)
+            user,                       // Utilisateur
+            machine,                    // Machine
+            copy,                       // Copie
+            clientInfo.ip,              // IP
+            clientInfo.country,         // Pays
+            clientInfo.city,            // Ville
+            serial,                     // Numéro de série
+            success ? date : 'Échec',   // Résultat (date ou "Échec")
+            success ? 'Succès' : 'Échec'// Statut (Succès ou Échec)
+        ];
+
+        console.log('Appending data to Google Sheet:', logData);
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: SHEET_ID,
+            range: `${SHEET_NAME}!A:M`, // Ajustez selon vos colonnes
+            valueInputOption: 'RAW',
+            requestBody: {
+                values: [logData],
+            },
+        });
+
+        console.log('Log ajouté avec succès à la Google Sheet');
+    } catch (error) {
+        console.error('Erreur lors de l’écriture dans la Google Sheet:', error.message);
+        console.error('Détails de l\'erreur:', error.stack); // Ajoutez les détails de l'erreur pour un diagnostic plus précis
+    }
+}
+
+// Fonction pour ajuster au fuseau horaire de Paris
 function adjustToParisTime(date) {
     const parisTimeZone = 'Europe/Paris';
     return new Date(date.toLocaleString('en-US', { timeZone: parisTimeZone }));
 }
-function pad(value) {
-    return value.toString().padStart(2, '0'); // Ajoute un zéro devant si nécessaire
-}
-
-// Route POST pour récupérer une date + UUID basée sur un numéro de série
-app.post('/api/getDate', async (req, res) => {
-    console.log('Request received at /api/getDate with body:', req.body);
-
-    try {
-        const { serial, uuid } = req.body;
-
-        if (!serial || !uuid) {
-            console.log('Numéro de série ou UUID manquant');
-            return res.status(400).json({ status: 'Error', message: 'Numéro de série ou UUID manquant' });
-        }
-
-        // Récupérer les informations géographiques
-        const clientInfo = await getClientInfo(req);
-        console.log(`Request from ${clientInfo.ip} (${clientInfo.country}, ${clientInfo.city})`);
-
-        // Récupérer les données depuis Google Sheets
-        const data = await fetchData(); // Appel direct à fetchData sans cache
-        const date = data[serial];
-
-        // Écrire les logs dans Google Sheets
-        await logToGoogleSheet(serial, date, clientInfo, !!date, uuid);
-
-        if (date) {
-            console.log('Date trouvée:', date);
-            res.json({ status: 'Success', date });
-        } else {
-            console.log('Aucune date trouvée');
-            res.json({ status: 'None', message: 'Aucune date trouvée pour ce numéro de série' });
-        }
-    } catch (error) {
-        console.error('Erreur sur /api/getDate:', error.message);
-        res.status(500).json({ status: 'Error', message: 'Erreur serveur' });
-    }
-});
 
 // Route racine pour vérifier que l'API fonctionne
 app.get('/', (req, res) => {
