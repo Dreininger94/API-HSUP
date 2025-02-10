@@ -8,14 +8,27 @@ app.use(express.json());
 // Variables d'environnement
 const DATA_SHEET_ID = process.env.DATA_SHEET_ID; // ID de la feuille des numéros de série
 const LOG_SHEET_ID = process.env.LOG_SHEET_ID;   // ID de la feuille des logs
-const DATA_SHEET_NAME = 'Feuille 1';                 // Nom de l'onglet pour les données
-const LOG_SHEET_NAME = 'Feuille 1';                  // Nom de l'onglet pour les logs
+const DATA_SHEET_NAME = 'Feuille 1';            // Nom de l'onglet pour les données
+const LOG_SHEET_NAME = 'Feuille 1';             // Nom de l'onglet pour les logs
 
 // Authentification Google Sheets
 const auth = new google.auth.GoogleAuth({
     credentials: JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString()),
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
+
+// Fonction pour extraire l'IP réelle du client
+function getClientIp(req) {
+    // Vérifier si l'en-tête 'x-forwarded-for' existe
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+        // L'en-tête 'x-forwarded-for' peut contenir plusieurs IPs (proxy chain)
+        return forwardedFor.split(',')[0].trim(); // Prendre la première IP
+    }
+
+    // Sinon, utiliser req.ip ou req.connection.remoteAddress
+    return req.ip || req.connection?.remoteAddress || 'Unknown';
+}
 
 // Route principale pour tester si l'API est en ligne
 app.get('/', (req, res) => {
@@ -61,18 +74,21 @@ app.post('/api/getdate', async (req, res) => {
 
         if (foundDate) {
             console.log('Numéro de série trouvé. Date associée :', foundDate);
-            // Récupérer les informations géographiques
-            const geoInfo = await getGeoInfo(req.ip);
+            // Récupérer l'IP réelle du client
+            const ip = getClientIp(req);
+            const geoInfo = await getGeoInfo(ip);
 
             // Écrire les logs dans la feuille des logs
             console.log('Tentative d\'écriture dans LOG_SHEET_ID :', LOG_SHEET_ID);
-            await logToGoogleSheet(serial, foundDate, req.ip, geoInfo.country, geoInfo.city, true, uuid);
+            await logToGoogleSheet(serial, foundDate, ip, geoInfo.country, geoInfo.city, true, uuid);
 
             return res.json({ status: 'Success', date: foundDate });
         } else {
             console.log('Numéro de série non trouvé.');
-            const geoInfo = await getGeoInfo(req.ip);
-            await logToGoogleSheet(serial, null, req.ip, geoInfo.country, geoInfo.city, false, uuid);
+            // Récupérer l'IP réelle du client
+            const ip = getClientIp(req);
+            const geoInfo = await getGeoInfo(ip);
+            await logToGoogleSheet(serial, null, ip, geoInfo.country, geoInfo.city, false, uuid);
 
             return res.status(404).json({ status: 'None', message: 'Aucune date trouvée pour ce numéro de série' });
         }
@@ -86,24 +102,18 @@ app.post('/api/getdate', async (req, res) => {
 // Fonction pour extraire les informations utilisateur, machine et compteur de copies depuis l'UUID
 function extractUserMachineFromUUID(uuid) {
     try {
-        const parts = uuid.split('-');
+        // Extraire les informations en utilisant des mots-clés spécifiques
+        const userMatch = uuid.match(/User-([^-\n]+)/);
+        const machineMatch = uuid.match(/Machine-([^-\n]+)/);
+        const copyMatch = uuid.match(/Copy-(\d+)/);
 
-        // Extraire les informations nécessaires
-        const user = parts[1];       // Par exemple, "David"
-        const machine = parts[3];    // Par exemple, "DELL_PAPA"
-        const copy = parts[5];       // Par exemple, "2"
-
-        // Vérifier que toutes les parties sont présentes
-        if (!user || !machine || !copy) {
-            console.error("Erreur lors de l'extraction de l'UUID : UUID mal formé", uuid);
-            return ["Unknown", "Unknown", 0]; // Valeurs par défaut en cas d'erreur
-        }
-
-        // Convertir le compteur en nombre entier
-        const copyCount = parseInt(copy, 10);
+        // Récupérer les valeurs correspondantes
+        const user = userMatch ? userMatch[1] : 'Unknown';
+        const machine = machineMatch ? machineMatch[1] : 'Unknown';
+        const copy = copyMatch ? parseInt(copyMatch[1], 10) : 0;
 
         // Retourner les valeurs extraites
-        return [user, machine, isNaN(copyCount) ? 0 : copyCount];
+        return [user, machine, isNaN(copy) ? 0 : copy];
     } catch (error) {
         console.error("Erreur dans extractUserMachineFromUUID :", error.message);
         return ["Unknown", "Unknown", 0]; // Valeurs par défaut en cas d'erreur
